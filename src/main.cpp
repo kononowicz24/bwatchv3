@@ -28,13 +28,16 @@ double fTemp = -273.15;
 
 ISR(INT0_vect) {
   cli();
-  fTemp = 99;
+  Serial.println("INT0");
   sei();
 }
 
 void setup()
 {
-  //cli();
+  cli();
+  PORTB = 0xFF;
+  PORTC = 0xFF;
+  PORTD = 0xFF; //ALL INPUTS ARE PULLUP - TODO: DISABLE FOR LOW POWER OPERATION
   Wire.begin();
   Serial.begin(9600);
 
@@ -53,8 +56,8 @@ void setup()
   }*/
   bmp280_init();
   hp5802_init();
-  //buttons_init();
-  //sei();
+  buttons_init();
+  sei();
 }
 
 
@@ -83,4 +86,5 @@ void loop()
   //delay(5000);           // wait 5 seconds for next scan
   hp5082_display((int)(fTemp*100));
   hp5082_setDP(0x04);
+  //Serial.println(PIND);
 }
