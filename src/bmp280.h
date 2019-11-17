@@ -6,7 +6,7 @@ void bmp280_init() {
   Wire.write(0x3F); //T=010 P=111 M=11 5f
   Wire.endTransmission();
   //Serial.println(bmp280_isok());
-  delay(1000);
+  delay(200);
 }
 
 void bmp280_calibration_temp(int16_t* calib_info) {

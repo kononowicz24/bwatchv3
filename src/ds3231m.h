@@ -1,4 +1,4 @@
-int ds3231m_getSeconds() {
+uint8_t ds3231m_getSeconds() {
   Wire.beginTransmission(0x68);
   Wire.write(0x00);
   Wire.endTransmission(false);
@@ -7,7 +7,7 @@ int ds3231m_getSeconds() {
   return (seconds>>4)*10+(seconds&0x0F);
 }
 
-int ds3231m_getMinutes() {
+uint8_t ds3231m_getMinutes() {
   Wire.beginTransmission(0x68);
   Wire.write(0x01);
   Wire.endTransmission(false);
@@ -16,7 +16,7 @@ int ds3231m_getMinutes() {
   return (minutes>>4)*10+(minutes&0x0F);
 }
 
-int ds3231m_getHours() {
+uint8_t ds3231m_getHours() {
   Wire.beginTransmission(0x68);
   Wire.write(0x02);
   Wire.endTransmission(false);

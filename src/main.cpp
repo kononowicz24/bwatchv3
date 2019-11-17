@@ -21,23 +21,47 @@ SoftWire Wire = SoftWire();
 #include "wirescanner.h"
 #include "ds3231m.h"
 #include "buttons.h"
+#include "deepsleep.h"
 
 int16_t* bmp280_temp_calib_info;
 int16_t* bmp280_pres_calib_info;
 double fTemp = -273.15;
 
-ISR(INT0_vect) {
+#define NUMBER_OF_STATES 2
+
+volatile int state = 0;
+
+ISR(PCINT3_vect) {
   cli();
-  Serial.println("INT0");
+  if (!(PIND & 0x04)){
+    Serial.println("PCINT26");
+    state++;
+    if (state>NUMBER_OF_STATES-1) state = 0;
+  }
+  if (!(PIND & 0x08)) {
+    Serial.println("PCINT27 : ADXL_ACTIVITY");
+    adxl345_clear_int();
+  }
+  if (!(PIND & 0x10)) {
+    Serial.println("PCINT28 : ADXL_INACTIVITY");
+    adxl345_clear_int();
+  }
+  sei();
+}
+
+ISR(PCINT2_vect) {
+  cli();
+  if (!(PINC & 0x10)) Serial.println("PCINT20"); //if PCINT2 is triggered and PC4 low
   sei();
 }
 
 void setup()
 {
   cli();
-  PORTB = 0xFF;
-  PORTC = 0xFF;
-  PORTD = 0xFF; //ALL INPUTS ARE PULLUP - TODO: DISABLE FOR LOW POWER OPERATION
+  //set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  //PORTB = 0xFF;
+  //PORTC = 0xFF;
+  //PORTD = 0xFF; //ALL INPUTS ARE PULLUP - TODO: DISABLE FOR LOW POWER OPERATION
   Wire.begin();
   Serial.begin(9600);
 
@@ -57,7 +81,9 @@ void setup()
   bmp280_init();
   hp5802_init();
   buttons_init();
+  adxl345_init();
   sei();
+  //deepsleep_goto();
 }
 
 
@@ -77,14 +103,17 @@ void loop()
     Serial.print(":");
     Serial.print(ds3231m_getMinutes());
     Serial.print(":");
-    Serial.print(ds3231m_getSeconds());
+    Serial.println(ds3231m_getSeconds());
   }
   //Serial.println(bmp280_isok());
   //Serial.print(htu21d_temp());
   //Serial.println("degC@HTU21D ");
   //Serial.println(bmp280_isok());
   //delay(5000);           // wait 5 seconds for next scan
+  //todo: opakowac w maszyne stanow
   hp5082_display((int)(fTemp*100));
   hp5082_setDP(0x04);
+  //Serial.print(adxl345_zdata());
+  ///Serial.print(" ");
   //Serial.println(PIND);
 }
