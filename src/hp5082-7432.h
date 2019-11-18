@@ -20,10 +20,15 @@ void hp5082_display(int value) { //todo: leading zeroes, on/off
       if (hp5802_DPpos & (3-i)) PORTA |= 0x80;
       PORTB &= 0xF0;
       //PORTB += segments[3-i];
-      PORTB = 1<<(3-i);
+      PORTB |= 1<<(3-i);
       _delay_ms(3); //todo refactor, one can dispay numbers only here
     }
 }
 void hp5082_setDP(int position) {
   hp5802_DPpos = position;
+}
+
+void hp5082_off() {
+  PORTA = 0x00;
+  PORTB &= 0xF0;
 }

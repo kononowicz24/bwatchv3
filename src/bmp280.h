@@ -34,7 +34,7 @@ void bmp280_calibration_pres(int16_t* calib_info) {
 }
 
 float bmp280_temp(int16_t* calib_info) {
-  //Serial.println(bmp280_isok());
+  Serial.println(bmp280_isok());
   Wire.beginTransmission(0x76);
   Wire.write(0xFA);
   Wire.endTransmission(false);

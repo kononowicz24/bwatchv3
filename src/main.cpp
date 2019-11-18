@@ -30,6 +30,10 @@ double fTemp = -273.15;
 #define NUMBER_OF_STATES 2
 
 volatile int state = 0;
+volatile int inactivity = 0;
+
+#define SCREENONTIME 10000
+volatile long long screenOffTime = 0;
 
 ISR(PCINT3_vect) {
   cli();
@@ -37,28 +41,35 @@ ISR(PCINT3_vect) {
     Serial.println("PCINT26");
     state++;
     if (state>NUMBER_OF_STATES-1) state = 0;
+    screenOffTime = millis() + SCREENONTIME;
   }
   if (!(PIND & 0x08)) {
-    Serial.println("PCINT27 : ADXL_ACTIVITY");
+    Serial.println("PCINT27 : ADXL_ACTIVITY");//todo
     adxl345_clear_int();
+    inactivity = 0;
+    screenOffTime = millis() + SCREENONTIME;
   }
   if (!(PIND & 0x10)) {
     Serial.println("PCINT28 : ADXL_INACTIVITY");
     adxl345_clear_int();
+    inactivity = 1;
   }
   sei();
 }
 
 ISR(PCINT2_vect) {
   cli();
-  if (!(PINC & 0x10)) Serial.println("PCINT20"); //if PCINT2 is triggered and PC4 low
+  if (!(PINC & 0x10)) {
+    Serial.println("PCINT20");
+    screenOffTime = millis() + SCREENONTIME;
+  } //if PCINT2 is triggered and PC4 low
   sei();
 }
 
 void setup()
 {
   cli();
-  //set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   //PORTB = 0xFF;
   //PORTC = 0xFF;
   //PORTD = 0xFF; //ALL INPUTS ARE PULLUP - TODO: DISABLE FOR LOW POWER OPERATION
@@ -78,10 +89,11 @@ void setup()
   for (int i=0; i<9; i++) {
     Serial.println(bmp280_pres_calib_info[i]);
   }*/
+  adxl345_init();
   bmp280_init();
   hp5802_init();
   buttons_init();
-  adxl345_init();
+
   sei();
   //deepsleep_goto();
 }
@@ -113,7 +125,6 @@ void loop()
   //todo: opakowac w maszyne stanow
   hp5082_display((int)(fTemp*100));
   hp5082_setDP(0x04);
-  //Serial.print(adxl345_zdata());
-  ///Serial.print(" ");
-  //Serial.println(PIND);
+  //if (inactivity==1)
+  if (millis()>screenOffTime) deepsleep_goto(state);
 }
