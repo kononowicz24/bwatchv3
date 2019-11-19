@@ -26,10 +26,11 @@ SoftWire Wire = SoftWire();
 int16_t* bmp280_temp_calib_info;
 int16_t* bmp280_pres_calib_info;
 double fTemp = -273.15;
+int dHour = 9999;
 
 #define NUMBER_OF_STATES 2
 
-volatile int state = 0;
+volatile int state = 1;
 volatile int inactivity = 0;
 
 #define SCREENONTIME 10000
@@ -39,7 +40,7 @@ ISR(PCINT3_vect) {
   cli();
   if (!(PIND & 0x04)){
     Serial.println("PCINT26");
-    state++;
+    if (!inactivity) state++;
     if (state>NUMBER_OF_STATES-1) state = 0;
     screenOffTime = millis() + SCREENONTIME;
   }
@@ -62,6 +63,7 @@ ISR(PCINT2_vect) {
   if (!(PINC & 0x10)) {
     Serial.println("PCINT20");
     screenOffTime = millis() + SCREENONTIME;
+    inactivity = 0;
   } //if PCINT2 is triggered and PC4 low
   sei();
 }
@@ -93,9 +95,8 @@ void setup()
   bmp280_init();
   hp5802_init();
   buttons_init();
-
+  screenOffTime = millis() + SCREENONTIME;
   sei();
-  //deepsleep_goto();
 }
 
 
@@ -104,18 +105,26 @@ void setup()
 #define BMPREFRESHMILLIS 5000
 long long dispLastMillis = -1*BMPREFRESHMILLIS;
 
+#define RTCREFRESHMILLIS 1000
+long long rtcLastMillis = -1*RTCREFRESHMILLIS;
+
 void loop()
 {
+  if (millis()>screenOffTime){
+    state = 1;
+    deepsleep_goto(state);
+  }
   if (millis()>dispLastMillis+BMPREFRESHMILLIS) {
-    fTemp = bmp280_temp(bmp280_temp_calib_info);
-    Serial.print(fTemp);
-    Serial.println("degC@BMP280");
+    if (bmp280_isok()) {
+      fTemp = bmp280_temp(bmp280_temp_calib_info);
+    } else Serial.println("BMP280 I2C error");
     dispLastMillis = millis();
-    Serial.print(ds3231m_getHours());
-    Serial.print(":");
-    Serial.print(ds3231m_getMinutes());
-    Serial.print(":");
-    Serial.println(ds3231m_getSeconds());
+  }
+  if (millis()>rtcLastMillis+RTCREFRESHMILLIS) {
+    dHour = ds3231m_getHours()*100+ds3231m_getMinutes();
+    //Serial.print(dHour);
+    //Serial.println(" @RTC");
+    rtcLastMillis = millis();
   }
   //Serial.println(bmp280_isok());
   //Serial.print(htu21d_temp());
@@ -123,8 +132,12 @@ void loop()
   //Serial.println(bmp280_isok());
   //delay(5000);           // wait 5 seconds for next scan
   //todo: opakowac w maszyne stanow
-  hp5082_display((int)(fTemp*100));
-  hp5082_setDP(0x04);
+  switch (state) {
+    case 0: hp5082_display((int)(fTemp*100));
+            break;
+    case 1: hp5082_display(dHour);
+  }
+
   //if (inactivity==1)
-  if (millis()>screenOffTime) deepsleep_goto(state);
+
 }
