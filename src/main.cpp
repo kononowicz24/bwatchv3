@@ -28,13 +28,14 @@ int16_t* bmp280_pres_calib_info;
 double fTemp = -273.15;
 int dHour = 9999;
 
-#define NUMBER_OF_STATES 2
+#define NUMBER_OF_STATES 4
 
 volatile int state = 1;
 volatile int inactivity = 0;
 
 #define SCREENONTIME 10000
 volatile long long screenOffTime = 0;
+volatile bool BTN3Pressed = false;
 
 ISR(PCINT3_vect) {
   cli();
@@ -64,6 +65,7 @@ ISR(PCINT2_vect) {
     Serial.println("PCINT20");
     screenOffTime = millis() + SCREENONTIME;
     inactivity = 0;
+    BTN3Pressed = true;
   } //if PCINT2 is triggered and PC4 low
   sei();
 }
@@ -136,6 +138,23 @@ void loop()
     case 0: hp5082_display((int)(fTemp*100));
             break;
     case 1: hp5082_display(dHour);
+            break;
+    case 2:
+            hp5082_display2(dHour/100, 0); //hours set
+            if (BTN3Pressed) {
+              int hour = ds3231m_getHours()+1;
+              ds3231m_setHours(hour>=24?0:hour);
+              BTN3Pressed = false;
+            }
+            break;
+    case 3:
+            hp5082_display2(dHour%100, 2); //minutes set
+            if (BTN3Pressed) {
+              int minute = ds3231m_getMinutes()+1;
+              ds3231m_setMinutes(minute>=60?0:minute);
+              BTN3Pressed = false;
+            }
+            break;
   }
 
   //if (inactivity==1)

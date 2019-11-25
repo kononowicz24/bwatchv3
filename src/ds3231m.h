@@ -40,7 +40,9 @@ void ds3231m_setMinutes(int minutes) {
 }
 
 void ds3231m_setHours(int hours) {
-  //Wire.beginTransmission(0x68);
-  //Wire.write(0x02);
-  //Wire.write()
+  Wire.beginTransmission(0x68);
+  Wire.write(0x02);
+  //Serial.println((hours%10+(((hours/10)<<4)&0x70))&0x3f);
+  Wire.write((hours%10+(((hours/10)<<4)&0x70))&0x3f);
+  Wire.endTransmission();
 }

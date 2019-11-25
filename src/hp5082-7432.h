@@ -24,6 +24,20 @@ void hp5082_display(int value) { //todo: leading zeroes, on/off
       _delay_ms(3); //todo refactor, one can dispay numbers only here
     }
 }
+
+void hp5082_display2(int value, int offset) { //todo: leading zeroes, on/off
+  PORTB &= 0xF0;
+  for (int i=0+offset; i<2+offset; i++) {
+      int digit = (value/(int)pow(10,3-i))%10;
+      PORTA = digits[digit];
+      //if (hp5802_DPpos & (3-i)) PORTA |= 0x80;
+      PORTB &= 0xF0;
+      //PORTB += segments[3-i];
+      PORTB |= 1<<(3-i);
+      _delay_ms(3); //todo refactor, one can dispay numbers only here
+    }
+}
+
 void hp5082_setDP(int position) {
   hp5802_DPpos = position;
 }
