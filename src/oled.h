@@ -47,112 +47,21 @@ static byte bCache[MAX_CACHE] = {0x40}; // for faster character drawing
 static byte bEnd = 1;
 static void oledWriteCommand(unsigned char c);
 
-#define DIRECT_PORT
-#define I2CPORT PORTC
-// A bit set to 1 in the DDR is an output, 0 is an INPUT
-#define I2CDDR DDRC
-
-// Pin or port numbers for SDA and SCL
-#define BB_SDA 1
-#define BB_SCL 0
-
 #if  F_CPU > 8000000L
  #define I2C_CLK_LOW() I2CPORT &= ~(1 << BB_SCL) //compiles to cbi instruction taking 2 clock cycles, extending the clock pulse
 #else
  #define I2C_CLK_LOW() I2CPORT = bOld //setting a port instruction takes 1 clock cycle
 #endif 
 
-//
-// Transmit a byte and ack bit
-//
-static inline void i2cByteOut(byte b)
-{
-byte i;
-byte bOld = I2CPORT & ~((1 << BB_SDA) | (1 << BB_SCL));
-     for (i=0; i<8; i++)
-     {
-         bOld &= ~(1 << BB_SDA);
-         if (b & 0x80)
-            bOld |= (1 << BB_SDA);
-         I2CPORT = bOld;
-         I2CPORT |= (1 << BB_SCL);
-         I2C_CLK_LOW();
-         b <<= 1;
-     } // for i
-// ack bit
-  I2CPORT = bOld & ~(1 << BB_SDA); // set data low
-  I2CPORT |= (1 << BB_SCL); // toggle clock
-  I2C_CLK_LOW();
-} /* i2cByteOut() */
-
-void i2cBegin(byte addr)
-{
-   I2CPORT |= ((1 << BB_SDA) + (1 << BB_SCL));
-   I2CDDR |= ((1 << BB_SDA) + (1 << BB_SCL));
-   I2CPORT &= ~(1 << BB_SDA); // data line low first
-   I2CPORT &= ~(1 << BB_SCL); // then clock line low is a START signal
-   i2cByteOut(addr << 1); // send the slave address
-} /* i2cBegin() */
-
-void i2cWrite(byte *pData, byte bLen)
-{
-byte i, b;
-byte bOld = I2CPORT & ~((1 << BB_SDA) | (1 << BB_SCL));
-
-   while (bLen--)
-   {
-      b = *pData++;
-      if (b == 0 || b == 0xff) // special case can save time
-      {
-         bOld &= ~(1 << BB_SDA);
-         if (b & 0x80)
-            bOld |= (1 << BB_SDA);
-         I2CPORT = bOld;
-         for (i=0; i<8; i++)
-         {
-            I2CPORT |= (1 << BB_SCL); // just toggle SCL, SDA stays the same
-            I2C_CLK_LOW();
-         } // for i    
-     }
-     else // normal byte needs every bit tested
-     {
-        for (i=0; i<8; i++)
-        {
-          
-         bOld &= ~(1 << BB_SDA);
-         if (b & 0x80)
-            bOld |= (1 << BB_SDA);
-
-         I2CPORT = bOld;
-         I2CPORT |= (1 << BB_SCL);
-         I2C_CLK_LOW();
-         b <<= 1;
-        } // for i
-     }
-// ACK bit seems to need to be set to 0, but SDA line doesn't need to be tri-state
-      I2CPORT &= ~(1 << BB_SDA);
-      I2CPORT |= (1 << BB_SCL); // toggle clock
-      I2CPORT &= ~(1 << BB_SCL);
-   } // for each byte
-} /* i2cWrite() */
-
-//
-// Send I2C STOP condition
-//
-void i2cEnd()
-{
-  I2CPORT &= ~(1 << BB_SDA);
-  I2CPORT |= (1 << BB_SCL);
-  I2CPORT |= (1 << BB_SDA);
-  //I2CDDR &= ~((1 << BB_SDA) | (1 << BB_SCL)); // let the lines float (tri-state)
-} /* i2cEnd() */
-
 // Wrapper function to write I2C data on Arduino
 static void I2CWrite(int iAddr, unsigned char *pData, int iLen)
 {
   //i2cBegin(oled_addr);
-  i2cWrite(pData, iLen);
+  Wire.beginTransmission(iAddr);
+  //i2cWrite(pData, iLen);
+  Wire.write(pData, iLen);
   //i2cEnd();
+  Wire.endTransmission();
 } /* I2CWrite() */
 
 static void oledCachedFlush(void)
@@ -187,10 +96,6 @@ unsigned char oled_initbuf[]={0x00,0xae,0xa8,0x3f,0xd3,0x00,0x40,0xa1,0xc8,
       0xaf,0x20,0x02};
 
   oled_addr = bAddr;
-  I2CDDR &= ~(1 << BB_SDA);
-  I2CDDR &= ~(1 << BB_SCL); // let them float high
-  I2CPORT |= (1 << BB_SDA); // set both lines to get pulled up
-  I2CPORT |= (1 << BB_SCL);
   
   I2CWrite(oled_addr, oled_initbuf, sizeof(oled_initbuf));
   if (bInvert)
