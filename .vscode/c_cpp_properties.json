@@ -8,6 +8,7 @@
             "includePath": [
                 "d:/workspace/k24SW/bwatchv3/include",
                 "d:/workspace/k24SW/bwatchv3/src",
+                "d:/workspace/k24SW/bwatchv3/.pio/libdeps/ATmega644A/SoftI2CMaster_ID6982",
                 "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/cores/MightyCore",
                 "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/variants/standard",
                 "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/libraries/AVR_examples/src",
@@ -30,6 +31,7 @@
                 "path": [
                     "d:/workspace/k24SW/bwatchv3/include",
                     "d:/workspace/k24SW/bwatchv3/src",
+                    "d:/workspace/k24SW/bwatchv3/.pio/libdeps/ATmega644A/SoftI2CMaster_ID6982",
                     "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/cores/MightyCore",
                     "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/variants/standard",
                     "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/libraries/AVR_examples/src",

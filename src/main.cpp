@@ -22,13 +22,15 @@ SoftWire Wire = SoftWire();
 #include "ds3231m.h"
 #include "buttons.h"
 #include "deepsleep.h"
+#include "oled.h"
 
 int16_t* bmp280_temp_calib_info;
 int16_t* bmp280_pres_calib_info;
 double fTemp = -273.15;
 int dHour = 9999;
+bool once = true;
 
-#define NUMBER_OF_STATES 4
+#define NUMBER_OF_STATES 5
 
 volatile int state = 1;
 volatile int inactivity = 0;
@@ -41,7 +43,7 @@ ISR(PCINT3_vect) {
   cli();
   if (!(PIND & 0x04)){
     Serial.println("PCINT26");
-    if (!inactivity) state++;
+    if (!inactivity) {state++; once = true;}
     if (state>NUMBER_OF_STATES-1) state = 0;
     screenOffTime = millis() + SCREENONTIME;
   }
@@ -97,6 +99,7 @@ void setup()
   bmp280_init();
   hp5802_init();
   buttons_init();
+  oledInit(0x3c, 0, 0);
   screenOffTime = millis() + SCREENONTIME;
   sei();
 }
@@ -136,6 +139,10 @@ void loop()
   //todo: opakowac w maszyne stanow
   switch (state) {
     case 0: hp5082_display((int)(fTemp*100));
+            if (once) {
+              oledFill(0);
+              once = false;
+            }
             break;
     case 1: hp5082_display(dHour);
             break;
@@ -154,6 +161,17 @@ void loop()
               ds3231m_setMinutes(minute>=60?0:minute);
               BTN3Pressed = false;
             }
+            break;
+    case 4:
+            if (once) {
+              oledFill(0);
+              oledWriteString(0,0,"HUJ",FONT_SMALL,0);
+              oledWriteString(0,1,"HUJ",FONT_SMALL,0);
+              oledWriteString(0,2,"1-Lines",FONT_SMALL,0);
+              oledWriteString(0,3,"2-8x8 characters",FONT_SMALL,0);
+              once = false;
+            }
+            hp5082_display(dHour);
             break;
   }
 
