@@ -76,7 +76,6 @@ static void oledCachedFlush(void)
 
 static void oledCachedWrite(byte *pData, byte bLen)
 {
-
    if (bEnd + bLen > MAX_CACHE) // need to flush it
    {
        oledCachedFlush(); // write the old data
