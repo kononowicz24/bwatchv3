@@ -28,7 +28,9 @@ int16_t* bmp280_temp_calib_info;
 int16_t* bmp280_pres_calib_info;
 double fTemp = -273.15;
 int dHour = 9999;
-bool once = true;
+int minute = 0;
+int hour = 0;
+volatile bool once = true;
 
 #define NUMBER_OF_STATES 5
 
@@ -41,33 +43,40 @@ volatile bool BTN3Pressed = false;
 
 ISR(PCINT3_vect) {
   cli();
-  if (!(PIND & 0x04)){
+  if (!(PIND & 0x04)){ //btn2 pressed
     Serial.println("PCINT26");
-    if (!inactivity) {state++; once = true;}
+    once = true;
+    if (!inactivity) state++; else state = 1;
     if (state>NUMBER_OF_STATES-1) state = 0;
+    inactivity = 0;
+    BTN3Pressed = false;
     screenOffTime = millis() + SCREENONTIME;
   }
-  if (!(PIND & 0x08)) {
-    Serial.println("PCINT27 : ADXL_ACTIVITY");//todo
+ // if (!(PIND & 0x08)) {
+ //   Serial.println("PCINT27 : ADXL_INACTIVITY");//todo
+ //   adxl345_clear_int();
+ //   screenOffTime = millis() + SCREENONTIME;
+ //   inactivity = 0;
+ //   
+ // }
+  if (!(PIND & 0x10)) {
+    once = true;
+    Serial.println("PCINT28 : ADXL_ACTIVITY");
     adxl345_clear_int();
     inactivity = 0;
     screenOffTime = millis() + SCREENONTIME;
-  }
-  if (!(PIND & 0x10)) {
-    Serial.println("PCINT28 : ADXL_INACTIVITY");
-    adxl345_clear_int();
-    inactivity = 1;
   }
   sei();
 }
 
 ISR(PCINT2_vect) {
   cli();
-  if (!(PINC & 0x10)) {
+  if (!(PINC & 0x10)) { //btn3 pressed
     Serial.println("PCINT20");
     screenOffTime = millis() + SCREENONTIME;
-    inactivity = 0;
-    BTN3Pressed = true;
+    //inactivity = 0;
+    once = true;
+    if (!inactivity) BTN3Pressed = true;
   } //if PCINT2 is triggered and PC4 low
   sei();
 }
@@ -87,19 +96,13 @@ void setup()
   bmp280_temp_calib_info = new int16_t[3];
   bmp280_pres_calib_info = new int16_t[9];
   bmp280_calibration_temp(bmp280_temp_calib_info);
-  /*for (int i=0; i<3; i++) {
-    Serial.println(bmp280_temp_calib_info[i]);
-  }
-  Serial.println();
-  bmp280_calibration_pres(bmp280_pres_calib_info);
-  for (int i=0; i<9; i++) {
-    Serial.println(bmp280_pres_calib_info[i]);
-  }*/
+
   adxl345_init();
   bmp280_init();
   hp5802_init();
   buttons_init();
   oledInit(0x3c, 0, 0);
+  oledFill(0);
   screenOffTime = millis() + SCREENONTIME;
   sei();
 }
@@ -131,39 +134,55 @@ void loop()
     //Serial.println(" @RTC");
     rtcLastMillis = millis();
   }
-  //Serial.println(bmp280_isok());
-  //Serial.print(htu21d_temp());
-  //Serial.println("degC@HTU21D ");
-  //Serial.println(bmp280_isok());
-  //delay(5000);           // wait 5 seconds for next scan
-  //todo: opakowac w maszyne stanow
+
+  
+  if (minute>59) minute=0;
+  if (hour>23) hour =0;
+
   switch (state) {
     case 0: hp5082_display((int)(fTemp*100));
-            if (once) {
-              oledFill(0);
-              once = false;
-            }
+            //if (once) {
+            //  oledFill(0);
+            //  once = false;
+            //}
             break;
     case 1: hp5082_display(dHour);
-            break;
-    case 2:
-            hp5082_display2(dHour/100, 0); //hours set
-            if (BTN3Pressed) {
-              int hour = ds3231m_getHours()+1;
-              ds3231m_setHours(hour>=24?0:hour);
-              BTN3Pressed = false;
-            }
+            //if (once) {
+            //  oledFill(0);
+            //  once = false;
+            //}
             break;
     case 3:
-            hp5082_display2(dHour%100, 2); //minutes set
+            if (once) {
+                hour = ds3231m_getHours();
+                oledFill(0);
+                once = false;
+            }
+            hp5082_display2(hour*100, 0); //hours set
             if (BTN3Pressed) {
-              int minute = ds3231m_getMinutes()+1;
-              ds3231m_setMinutes(minute>=60?0:minute);
+              //int hour = ds3231m_getHours()+1;
+              hour++;
+              ds3231m_setHours(hour);
               BTN3Pressed = false;
             }
             break;
     case 4:
             if (once) {
+                minute = ds3231m_getMinutes();
+                //oledFill(0);
+                once = false;
+            }
+            hp5082_display2(minute, 2); //minutes set
+            if (BTN3Pressed) {
+              //int minute = ds3231m_getMinutes()+1;
+              minute++;
+              ds3231m_setMinutes(minute);
+              BTN3Pressed = false;
+            }
+            break;
+    case 2:
+            if (once) {
+              oledInit(0x3c, 0, 0);
               oledFill(0);
               oledWriteString(0,0,"HUJ",FONT_SMALL,0);
               oledWriteString(0,1,"HUJ",FONT_SMALL,0);
@@ -172,6 +191,7 @@ void loop()
               oledWriteString(0,4,"5-8x8 characters",FONT_SMALL,0);
               oledWriteString(0,5,"XdxdxDXDXdxdxDXDXdxdxDXDXd",FONT_SMALL,0);
               oledWriteString(0,6,"dupadupadupadupadupa",FONT_SMALL,0);
+              oledWriteString(0,7,"1234567890abcdefghijkl",FONT_SMALL,0);
               once = false;
             }
             hp5082_display(dHour);
