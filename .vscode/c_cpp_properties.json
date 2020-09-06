@@ -8,9 +8,10 @@
             "includePath": [
                 "d:/workspace/k24SW/bwatchv3/include",
                 "d:/workspace/k24SW/bwatchv3/src",
-                "d:/workspace/k24SW/bwatchv3/.pio/libdeps/ATmega644A/SoftI2CMaster_ID6982",
+                "d:/workspace/k24SW/bwatchv3/.pio/libdeps/ATmega644A/SoftI2CMaster",
                 "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/cores/MightyCore",
                 "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/variants/standard",
+                "d:/workspace/k24SW/bwatchv3/.pio/libdeps/ATmega644A/SoftI2CMaster_ID6982",
                 "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/libraries/AVR_examples/src",
                 "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/libraries/EEPROM/src",
                 "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/libraries/Ethernet/src",
@@ -31,9 +32,10 @@
                 "path": [
                     "d:/workspace/k24SW/bwatchv3/include",
                     "d:/workspace/k24SW/bwatchv3/src",
-                    "d:/workspace/k24SW/bwatchv3/.pio/libdeps/ATmega644A/SoftI2CMaster_ID6982",
+                    "d:/workspace/k24SW/bwatchv3/.pio/libdeps/ATmega644A/SoftI2CMaster",
                     "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/cores/MightyCore",
                     "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/variants/standard",
+                    "d:/workspace/k24SW/bwatchv3/.pio/libdeps/ATmega644A/SoftI2CMaster_ID6982",
                     "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/libraries/AVR_examples/src",
                     "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/libraries/EEPROM/src",
                     "C:/Users/k24/.platformio/packages/framework-arduino-avr-mightycore/libraries/Ethernet/src",
@@ -51,7 +53,7 @@
                 ]
             },
             "defines": [
-                "PLATFORMIO=40304",
+                "PLATFORMIO=50000",
                 "ARDUINO_AVR_ATmega644",
                 "F_CPU=8000000L",
                 "ARDUINO_ARCH_AVR",

@@ -154,13 +154,13 @@ void loop()
       if (once) {
         oledInit(0x3c, 0, 0);
         oledFill(0);
-        oledWriteString(0,0,"HUJ",FONT_SMALL,0);
-        oledWriteString(0,1,"HUJ",FONT_SMALL,0);
+        oledWriteString(0,0,"debug",FONT_SMALL,0);
+        oledWriteString(0,1,"debug",FONT_SMALL,0);
         oledWriteString(0,2,"1-Lines",FONT_SMALL,0);
         oledWriteString(0,3,"2-8x8 characters",FONT_SMALL,0);
         oledWriteString(0,4,"5-8x8 characters",FONT_SMALL,0);
         oledWriteString(0,5,"XdxdxDXDXdxdxDXDXdxdxDXDXd",FONT_SMALL,0);
-        oledWriteString(0,6,"dupadupadupadupadupa",FONT_SMALL,0);
+        oledWriteString(0,6,"1234567890abcdefghijk",FONT_SMALL,0);
         oledWriteString(0,7,"1234567890abcdefghijk",FONT_SMALL,0);
         once = false;
       }
