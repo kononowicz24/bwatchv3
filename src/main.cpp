@@ -7,7 +7,7 @@
 #define SCL_PORT PORTC
 #define SCL_PIN 0
 
-#define I2C_TIMEOUT 100
+#define I2C_TIMEOUT 10
 #define I2C_FASTMODE 1
 
 #include <SoftWire.h>
@@ -55,7 +55,7 @@ void refreshTime() {
 ISR(PCINT3_vect) {
   cli();
   if (!(PIND & 0x04)){ //btn2 pressed
-    //Serial.println("PCINT26");
+    Serial.println("PCINT26");
     once = true;
     if (!inactivity) state++; else state = 1;
     if (state>NUMBER_OF_STATES-1) state = 0;
@@ -64,13 +64,13 @@ ISR(PCINT3_vect) {
     screenOffTime = millis() + SCREENONTIME;
     
   }
- // if (!(PIND & 0x08)) {
- //   Serial.println("PCINT27 : ADXL_INACTIVITY");//todo
- //   adxl345_clear_int();
- //   screenOffTime = millis() + SCREENONTIME;
- //   inactivity = 0;
- //   
- // }
+  if (!(PIND & 0x08)) {
+    Serial.println("PCINT27 : ADXL_INACTIVITY");//todo
+    adxl345_clear_int();
+    screenOffTime = millis() + SCREENONTIME;
+    inactivity = 0;
+    
+  }
   if (!(PIND & 0x10)) {
     if (inactivity) once = true;
     //Serial.println("PCINT28 : ADXL_ACTIVITY");
@@ -86,7 +86,7 @@ ISR(PCINT3_vect) {
 ISR(PCINT2_vect) {
   cli();
   if (!(PINC & 0x10)) { //btn3 pressed
-    //Serial.println("PCINT20");
+    Serial.println("PCINT20");
     screenOffTime = millis() + SCREENONTIME;
     //inactivity = 0;
     once = true;
@@ -95,10 +95,15 @@ ISR(PCINT2_vect) {
   sei();
 }
 
+ISR(USART_RX_vect)
+{ 
+  Serial.println("U");
+}
+
 void setup()
 {
   cli();
-  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  //set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   //PORTB = 0xFF;
   //PORTC = 0xFF;
   //PORTD = 0xFF; //ALL INPUTS ARE PULLUP - TODO: DISABLE FOR LOW POWER OPERATION
@@ -126,13 +131,19 @@ void loop()
 {
   if (millis()>screenOffTime){
     state = 1;
-    deepsleep_goto(state);
+    //deepsleep_goto(state);
+      hp5082_off();
+      oledShutdown();
+      sleep_enable();
+      sei();
+      sleep_cpu();
+      sleep_disable();
   }
   if (millis()>dispLastMillis+BMPREFRESHMILLIS) {
-    if (bmp280_isok()) {
-      fTemp = bmp280_temp(bmp280_temp_calib_info);
-    } else Serial.println("BMP280 I2C error");
-    dispLastMillis = millis();
+  //  if (bmp280_isok()) {
+  //    fTemp = bmp280_temp(bmp280_temp_calib_info);
+  //  } else Serial.println("BMP280 I2C error");
+  //  dispLastMillis = millis();
   }
   if (millis()>rtcLastMillis+RTCREFRESHMILLIS) {
     refreshTime();
@@ -174,10 +185,11 @@ void loop()
           once = false;
       }
       if (BTN3Pressed) {
-        //int hour = ds3231m_getHours()+1;
+        hour = ds3231m_getHours()+1;
         BTN3Pressed = false;
-        hour++;
+        //hour++;
         ds3231m_setHours(hour); //hours set
+        hour = ds3231m_getHours();
       }
       hp5082_display2(hour*100, 0);
        
@@ -191,9 +203,34 @@ void loop()
           once = false;
       }
       if (BTN3Pressed) {
-        //int minute = ds3231m_getMinutes()+1;
-        minute++;
+        minute = ds3231m_getMinutes()+1;
+        //minute++;
         ds3231m_setMinutes(minute);
+        minute = ds3231m_getMinutes();
+        BTN3Pressed = false;
+      }
+      hp5082_display2(minute, 2); //minutes set
+      break;
+    }
+    case 5: {
+      if (once) {
+        oledInit(0x3c, 0, 0);
+        oledFill(0);
+        oledWriteString(0,0,"debug",FONT_SMALL,0);
+        oledWriteString(0,1,"debug",FONT_SMALL,0);
+        oledWriteString(0,2,"1-Lines",FONT_SMALL,0);
+        oledWriteString(0,3,"2-8x8 characters",FONT_SMALL,0);
+        oledWriteString(0,4,"5-8x8 characters",FONT_SMALL,0);
+        oledWriteString(0,5,"XdxdxDXDXdxdxDXDXdxdxDXDXd",FONT_SMALL,0);
+        oledWriteString(0,6,"1234567890abcdefghijk",FONT_SMALL,0);
+        oledWriteString(0,7,"1234567890abcdefghijk",FONT_SMALL,0);
+        once = false;
+      }
+      if (BTN3Pressed) {
+        minute = ds3231m_getMinutes()+1;
+        //minute++;
+        ds3231m_setMinutes(minute);
+        minute = ds3231m_getMinutes();
         BTN3Pressed = false;
       }
       hp5082_display2(minute, 2); //minutes set

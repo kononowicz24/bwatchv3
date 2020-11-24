@@ -13,6 +13,7 @@
             "request": "launch",
             "name": "PIO Debug",
             "executable": "d:/workspace/k24SW/bwatchv3/.pio/build/ATmega644A/firmware.elf",
+            "projectEnvName": "ATmega644A",
             "toolchainBinDir": "C:/Users/k24/.platformio/packages/toolchain-atmelavr/bin",
             "preLaunchTask": {
                 "type": "PlatformIO",
@@ -25,6 +26,7 @@
             "request": "launch",
             "name": "PIO Debug (skip Pre-Debug)",
             "executable": "d:/workspace/k24SW/bwatchv3/.pio/build/ATmega644A/firmware.elf",
+            "projectEnvName": "ATmega644A",
             "toolchainBinDir": "C:/Users/k24/.platformio/packages/toolchain-atmelavr/bin",
             "internalConsoleOptions": "openOnSessionStart"
         }
