@@ -20,6 +20,7 @@ SoftWire Wire = SoftWire();
 #include "buttons.h"
 #include "deepsleep.h"
 #include "oled.h"
+#include "hm11.h"
 
 volatile int dHour = 9999;
 int minute = 0;
@@ -35,7 +36,7 @@ uint8_t RXbytes = 0;
 #define NUMBER_OF_STATES 5
 
 volatile int state = 2;
-volatile bool inactivity = false;
+//volatile bool inactivity = false;
 
 #define SCREENONTIME 20000
 volatile long long screenOffTime = 0;
@@ -51,34 +52,44 @@ void refreshTime() {
 
 ISR(PCINT3_vect) {
   cli();
-
-  if (!(PIND & 0x20)) { //pd3
-    Serial.println("PCINT27 : ADXL_ACTIVITY");//todo //irq2 //pd3
-    adxl345_clear_int();
-    screenOffTime = millis() + SCREENONTIME;
-    inactivity = 0;
-    
-  }
-  if (!(PIND & 0x10)) { //pd4 //irq1 //test
+  if (!(PIND & 0x20)) { //pd5
     if (inactivity) once = true;
-    Serial.println("PCINT28 : ADXL_INACTIVITY");
-    inactivity = 0;
+    Serial.println("PCINT29 : ADXL_ACTIVITY");//todo //irq2 //pd3
+    adxl345_clear_int();
     refreshTime();
     screenOffTime = millis() + SCREENONTIME;
+    inactivity = 0;
+    state = 2;
+  }
+  if (!(PIND & 0x10)) { //pd4 //test
+    Serial.println("PCINT28 : INACTIVITY"); //INT1
     adxl345_clear_int();
+    //refreshTime();
+    //screenOffTime = millis() + SCREENONTIME;
+    //inactivity = 0;
+  }
+  if (!(PIND & 0x01)) { //pd0 - RX BT
+    //Serial.println("PCINT24 : RX BT");
+    if (inactivity) {
+      //once = true;
+    //Serial.println("RX_BT");
+      screenOffTime = millis() + SCREENONTIME;
+      inactivity = 0;
+      state = 2;
+    }
   }
   sei();
 }
 
 ISR(PCINT2_vect) {
   cli();
-  if (!(PINC & 0x80)) { //btn3 pressed - sw1
+  if (!(PINC & 0x80)) { //pressed - sw1
     Serial.println("SW1");
     screenOffTime = millis() + SCREENONTIME;
     once = true;
     if (!inactivity) SW1Pressed = true;
   }
-  if (!(PINC & 0x40)){ // pd2 //btn2 pressed - sw2
+  if (!(PINC & 0x40)){ // pd2 //pressed - sw2
     Serial.println("SW2");
     once = true;
     if (!inactivity) state++; else state = 1;
@@ -86,7 +97,6 @@ ISR(PCINT2_vect) {
     inactivity = 0;
     SW1Pressed = false;
     screenOffTime = millis() + SCREENONTIME;
-    
   }
   sei();
 }
@@ -103,6 +113,7 @@ void setup()
   RXString = new char[RXStringMaxSize];
   adxl345_init();
   hp5802_init();
+  hm11_init();
   buttons_init();
   oledInit(0x3c, 0, 0);
   oledFill(0);
@@ -114,8 +125,8 @@ void loop()
 {
   if (millis()>screenOffTime){
       state = 1;
-      hp5082_off();
-      oledShutdown();
+      //hp5082_off();
+      //oledShutdown();
       deepsleep_goto();
   }//check always
 

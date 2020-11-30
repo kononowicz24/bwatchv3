@@ -1,21 +1,24 @@
 void adxl345_init() {
   Wire.beginTransmission(0x53);
   Wire.write(0x24);//reg 0x24
-  Wire.write(0x04);//0.3125g activity threshold 05
-  Wire.write(0x03);//0.25g inactivity threshold 04
+  Wire.write(0x04);//0.5g activity threshold 
+  Wire.write(0x03);//0.25g inactivity threshold
   Wire.write(0x0a);//10s to interrupt inactivity 0a
-  Wire.write(0xff);//both ac coupled wo z axis
+  Wire.write(0xff);//both ac coupled
   Wire.endTransmission();
+
   Wire.beginTransmission(0x53);
   Wire.write(0x2d); //interrupts reg
   Wire.write(0x28); //enable measure
-  Wire.write(0x18); //active and inactivity interrupt
-  Wire.write(0x08); //set inactivity interrupt to INT2
+  Wire.write(0x18); //activity and double tap interrupt
+  Wire.write(0x08); //set double tap interrupt to INT2
   Wire.endTransmission();
+
   Wire.beginTransmission(0x53);
   Wire.write(0x31); //data format reg
-  Wire.write(0x20);
+  Wire.write(0x20); //interrupts active low
   Wire.endTransmission();
+
   PORTD |= 0x00110000;
   DDRD &= 0b11001111;//PD4,5 as INPUT
   PCMSK3 |= 0b00110000; //set PCINT29,28
