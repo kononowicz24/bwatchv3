@@ -37,7 +37,7 @@ void hp5082_display2(int value, int offset) { //todo: leading zeroes, on/off
       PORTB &= 0xF0;
       //PORTB += segments[3-i];
       PORTB |= 1<<(3-i);
-      _delay_ms(3); //todo refactor, one can dispay numbers only here
+      _delay_ms(1); //todo refactor, one can dispay numbers only here
     }
 }
 

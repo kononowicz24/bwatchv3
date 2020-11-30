@@ -16,9 +16,9 @@ void adxl345_init() {
   Wire.write(0x31); //data format reg
   Wire.write(0x20);
   Wire.endTransmission();
-  PORTD |= 0x00011000;
-  DDRD &= 0b11100111;//PD4,5 as INPUT
-  PCMSK3 |= 0b00011000; //set PCINT27,28
+  PORTD |= 0x00110000;
+  DDRD &= 0b11001111;//PD4,5 as INPUT
+  PCMSK3 |= 0b00110000; //set PCINT29,28
   PCICR |= 0x08; //enable PCINT bank 3
 }
 

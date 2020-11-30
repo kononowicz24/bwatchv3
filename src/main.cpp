@@ -1,4 +1,3 @@
-
 #include <Arduino.h>
 #include <avr/interrupt.h>
 
@@ -14,8 +13,6 @@
 
 SoftWire Wire = SoftWire();
 
-//#include "htu21d.h"
-#include "bmp280.h"
 #include "hp5082-7432.h"
 #include "adxl345.h"
 #include "wirescanner.h"
@@ -24,27 +21,27 @@ SoftWire Wire = SoftWire();
 #include "deepsleep.h"
 #include "oled.h"
 
-int16_t* bmp280_temp_calib_info;
-int16_t* bmp280_pres_calib_info;
-double fTemp = -273.15;
 volatile int dHour = 9999;
 int minute = 0;
 int hour = 0;
 volatile bool once = true;
 
+char* RXString;
+uint8_t RXStringMaxSize = 255;
+bool rxStringComplete = false;
+bool newRxString = false;
+uint8_t RXbytes = 0;
+
 #define NUMBER_OF_STATES 5
 
-volatile int state = 1;
+volatile int state = 2;
 volatile bool inactivity = false;
 
-#define SCREENONTIME 10000
+#define SCREENONTIME 20000
 volatile long long screenOffTime = 0;
-volatile bool BTN3Pressed = false;
+volatile bool SW1Pressed = false;
 
-#define BMPREFRESHMILLIS 5000
-long long dispLastMillis = -1*BMPREFRESHMILLIS;
-
-#define RTCREFRESHMILLIS 1000
+#define RTCREFRESHMILLIS 500
 volatile long long rtcLastMillis = -1*RTCREFRESHMILLIS;
 
 void refreshTime() {
@@ -54,27 +51,17 @@ void refreshTime() {
 
 ISR(PCINT3_vect) {
   cli();
-  if (!(PIND & 0x04)){ //btn2 pressed
-    Serial.println("PCINT26");
-    once = true;
-    if (!inactivity) state++; else state = 1;
-    if (state>NUMBER_OF_STATES-1) state = 0;
-    inactivity = 0;
-    BTN3Pressed = false;
-    screenOffTime = millis() + SCREENONTIME;
-    
-  }
-  if (!(PIND & 0x08)) {
-    Serial.println("PCINT27 : ADXL_INACTIVITY");//todo
+
+  if (!(PIND & 0x20)) { //pd3
+    Serial.println("PCINT27 : ADXL_ACTIVITY");//todo //irq2 //pd3
     adxl345_clear_int();
     screenOffTime = millis() + SCREENONTIME;
     inactivity = 0;
     
   }
-  if (!(PIND & 0x10)) {
+  if (!(PIND & 0x10)) { //pd4 //irq1 //test
     if (inactivity) once = true;
-    //Serial.println("PCINT28 : ADXL_ACTIVITY");
-    
+    Serial.println("PCINT28 : ADXL_INACTIVITY");
     inactivity = 0;
     refreshTime();
     screenOffTime = millis() + SCREENONTIME;
@@ -85,39 +72,36 @@ ISR(PCINT3_vect) {
 
 ISR(PCINT2_vect) {
   cli();
-  if (!(PINC & 0x10)) { //btn3 pressed
-    Serial.println("PCINT20");
+  if (!(PINC & 0x80)) { //btn3 pressed - sw1
+    Serial.println("SW1");
     screenOffTime = millis() + SCREENONTIME;
-    //inactivity = 0;
     once = true;
-    if (!inactivity) BTN3Pressed = true;
-  } //if PCINT2 is triggered and PC4 low
+    if (!inactivity) SW1Pressed = true;
+  }
+  if (!(PINC & 0x40)){ // pd2 //btn2 pressed - sw2
+    Serial.println("SW2");
+    once = true;
+    if (!inactivity) state++; else state = 1;
+    if (state>NUMBER_OF_STATES-1) state = 1;
+    inactivity = 0;
+    SW1Pressed = false;
+    screenOffTime = millis() + SCREENONTIME;
+    
+  }
   sei();
-}
-
-ISR(USART_RX_vect)
-{ 
-  Serial.println("U");
 }
 
 void setup()
 {
   cli();
-  //set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  
   //PORTB = 0xFF;
   //PORTC = 0xFF;
   //PORTD = 0xFF; //ALL INPUTS ARE PULLUP - TODO: DISABLE FOR LOW POWER OPERATION
   Wire.begin();
-  Serial.begin(115200);
-
-  //wirescanner_scan();
-
-  bmp280_temp_calib_info = new int16_t[3];
-  bmp280_pres_calib_info = new int16_t[9];
-  bmp280_calibration_temp(bmp280_temp_calib_info);
-
+  Serial.begin(9600);
+  RXString = new char[RXStringMaxSize];
   adxl345_init();
-  bmp280_init();
   hp5802_init();
   buttons_init();
   oledInit(0x3c, 0, 0);
@@ -126,53 +110,63 @@ void setup()
   sei();
 }
 
-
 void loop()
 {
   if (millis()>screenOffTime){
-    state = 1;
-    //deepsleep_goto(state);
+      state = 1;
       hp5082_off();
       oledShutdown();
-      sleep_enable();
-      sei();
-      sleep_cpu();
-      sleep_disable();
-  }
-  if (millis()>dispLastMillis+BMPREFRESHMILLIS) {
-  //  if (bmp280_isok()) {
-  //    fTemp = bmp280_temp(bmp280_temp_calib_info);
-  //  } else Serial.println("BMP280 I2C error");
-  //  dispLastMillis = millis();
-  }
+      deepsleep_goto();
+  }//check always
+
   if (millis()>rtcLastMillis+RTCREFRESHMILLIS) {
     refreshTime();
-  }
+  }//check always
 
   if (minute>59) minute=0;
-  if (hour>23) hour =0;
+  if (hour>23) hour =0; //check always
 
-  switch (state) {
-    case 0: { 
-      hp5082_display((int)(fTemp*100));
-      break;
-    }
-    case 1: {
+  switch (state) {//switch STATE MACHINE
+    case 2: {
+      if (once) {
+        oledInit(0x3c, 0, 0);
+        oledShutdown();
+        once = false;
+      }
       hp5082_display(dHour);
+      for(RXbytes = 0; Serial.available(); RXbytes++) {
+         // get the new byte:
+        char inChar = (char)Serial.read();
+
+        // add it to the inputString:
+        RXString[RXbytes] = inChar;
+        // if the incoming character is a newline, set a flag so the main loop can
+        // do something about it:
+       // if (inChar == '\n') {
+          
+        //}
+        rxStringComplete = true;
+        newRxString = true;
+      }
+      if (newRxString)
+        for (int i = RXbytes; i<RXStringMaxSize; i++) {
+          RXString[i] = 0;
+        }
+      
+      if (newRxString) {
+        oledInit(0x3c, 0, 0);
+        oledFill(0);
+        oledWriteString(0,0,RXString,FONT_SMALL,0);
+        newRxString = false;
+      }
       break;
     }
-    case 2: { 
+    case 1: { //debug, setup
       if (once) {
         oledInit(0x3c, 0, 0);
         oledFill(0);
         oledWriteString(0,0,"debug",FONT_SMALL,0);
-        oledWriteString(0,1,"debug",FONT_SMALL,0);
-        oledWriteString(0,2,"1-Lines",FONT_SMALL,0);
-        oledWriteString(0,3,"2-8x8 characters",FONT_SMALL,0);
-        oledWriteString(0,4,"5-8x8 characters",FONT_SMALL,0);
-        oledWriteString(0,5,"XdxdxDXDXdxdxDXDXdxdxDXDXd",FONT_SMALL,0);
-        oledWriteString(0,6,"1234567890abcdefghijk",FONT_SMALL,0);
-        oledWriteString(0,7,"1234567890abcdefghijk",FONT_SMALL,0);
+        oledWriteString(0,1,"Ustawienia",FONT_SMALL,0);
         once = false;
       }
       hp5082_display(dHour);
@@ -181,15 +175,21 @@ void loop()
     case 3: {
       if (once) {
           hour = ds3231m_getHours();
-          oledShutdown();
+          if (!SW1Pressed){//tylko przy zmianie trybu
+            oledInit(0x3c, 0, 0);
+            oledFill(0);
+            oledWriteString(0,0,"    Ustaw godzine",FONT_SMALL,0);
+            oledWriteString(0,1,"   SW1 = godzina++ ->",FONT_SMALL,0);
+            oledWriteString(0,5,"SW2 = kolejny tryb ->",FONT_SMALL,0);
+          }
           once = false;
       }
-      if (BTN3Pressed) {
+      if (SW1Pressed) {
         hour = ds3231m_getHours()+1;
-        BTN3Pressed = false;
-        //hour++;
+        if (hour>23) hour =0;
         ds3231m_setHours(hour); //hours set
         hour = ds3231m_getHours();
+        SW1Pressed = false;
       }
       hp5082_display2(hour*100, 0);
        
@@ -199,42 +199,25 @@ void loop()
     case 4: {
       if (once) {
           minute = ds3231m_getMinutes();
-          oledShutdown();
+          if (!SW1Pressed) {
+            oledInit(0x3c, 0, 0);
+            oledFill(0);
+            oledWriteString(0,0,"    Ustaw minute",FONT_SMALL,0);
+            oledWriteString(0,1,"    SW1 = minuta++ ->",FONT_SMALL,0);
+            oledWriteString(0,5,"SW2 = kolejny tryb ->",FONT_SMALL,0);
+          }
           once = false;
       }
-      if (BTN3Pressed) {
+      if (SW1Pressed) {
         minute = ds3231m_getMinutes()+1;
-        //minute++;
+        if (minute>59) minute=0;
         ds3231m_setMinutes(minute);
         minute = ds3231m_getMinutes();
-        BTN3Pressed = false;
+        SW1Pressed = false;
       }
       hp5082_display2(minute, 2); //minutes set
       break;
     }
-    case 5: {
-      if (once) {
-        oledInit(0x3c, 0, 0);
-        oledFill(0);
-        oledWriteString(0,0,"debug",FONT_SMALL,0);
-        oledWriteString(0,1,"debug",FONT_SMALL,0);
-        oledWriteString(0,2,"1-Lines",FONT_SMALL,0);
-        oledWriteString(0,3,"2-8x8 characters",FONT_SMALL,0);
-        oledWriteString(0,4,"5-8x8 characters",FONT_SMALL,0);
-        oledWriteString(0,5,"XdxdxDXDXdxdxDXDXdxdxDXDXd",FONT_SMALL,0);
-        oledWriteString(0,6,"1234567890abcdefghijk",FONT_SMALL,0);
-        oledWriteString(0,7,"1234567890abcdefghijk",FONT_SMALL,0);
-        once = false;
-      }
-      if (BTN3Pressed) {
-        minute = ds3231m_getMinutes()+1;
-        //minute++;
-        ds3231m_setMinutes(minute);
-        minute = ds3231m_getMinutes();
-        BTN3Pressed = false;
-      }
-      hp5082_display2(minute, 2); //minutes set
-      break;
-    }
+    default: state=2; break;
   }
 }
