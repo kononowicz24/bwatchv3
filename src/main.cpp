@@ -50,8 +50,16 @@ void refreshTime() {
     rtcLastMillis = millis();
 }
 
+bool isStringValidText(char* string, uint8_t strlength) {
+  for (int i=0; i<strlength; i++) {
+    if (string[i] == '\\') return true;
+  }
+  return false;
+}
+
 ISR(PCINT3_vect) {
   cli();
+  //hp5082_off();
   if (!(PIND & 0x20)) { //pd5
     if (inactivity) once = true;
     Serial.println("PCINT29 : ADXL_ACTIVITY");//todo //irq2 //pd3
@@ -82,6 +90,7 @@ ISR(PCINT3_vect) {
 
 ISR(PCINT2_vect) {
   cli();
+  //hp5082_off();
   if (!(PINC & 0x80)) { //pressed - sw1
     Serial.println("SW1");
     hm11_wakeup();
@@ -131,6 +140,7 @@ void loop()
         oledShutdown();
         once = false;
       }
+      hp5082_display(dHour); // blocking task to the end
       for(RXbytes = 0; Serial.available(); RXbytes++) {
          // get the new byte:
         char inChar = (char)Serial.read();
@@ -144,20 +154,22 @@ void loop()
           screenOffTime = millis() + SCREENONTIME;
         }
       //validate RXString - characters with app name and 
+      if (!isStringValidText(RXString, RXStringMaxSize)) {
+          newRxString = false;
+      }
       if (newRxString) {
         oledInit(0x3c, 0, 0);
         oledFill(0);
         oledWriteString(0,0,RXString,FONT_SMALL,0);
         newRxString = false;
       }
-      hp5082_display(dHour); // blocking task to the end
       break;
     }
     case 1: { //debug, setup
       if (once) {
         oledInit(0x3c, 0, 0);
         oledFill(0);
-        oledWriteString(0,0,"debug",FONT_SMALL,0);
+       //oledWriteString(0,0,"debug",FONT_SMALL,0);
         oledWriteString(0,1,"Ustawienia",FONT_SMALL,0);
         once = false;
       }
@@ -210,7 +222,7 @@ void loop()
       hp5082_display2(minute, 2); //minutes set
       break;
     }
-    default: state=2; break;
+    default: state=1; break;
   }
 
   if (millis()>screenOffTime){
