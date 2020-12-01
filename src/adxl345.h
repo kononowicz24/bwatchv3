@@ -3,7 +3,7 @@ void adxl345_init() {
   Wire.write(0x24);//reg 0x24
   Wire.write(0x04);//0.5g activity threshold 
   Wire.write(0x03);//0.25g inactivity threshold
-  Wire.write(0x0a);//10s to interrupt inactivity 0a
+  Wire.write(0x14);//20s to interrupt inactivity 14hex
   Wire.write(0xff);//both ac coupled
   Wire.endTransmission();
 

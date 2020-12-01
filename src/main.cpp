@@ -36,7 +36,7 @@ uint8_t RXbytes = 0;
 #define NUMBER_OF_STATES 5
 
 volatile int state = 2;
-//volatile bool inactivity = false;
+//volatile bool inactivity = false; //moved to deepsleep.h
 
 #define SCREENONTIME 20000
 volatile long long screenOffTime = 0;
@@ -64,15 +64,14 @@ ISR(PCINT3_vect) {
   if (!(PIND & 0x10)) { //pd4 //test
     Serial.println("PCINT28 : INACTIVITY"); //INT1
     adxl345_clear_int();
+    if  (millis()>screenOffTime)
+      deepsleep_goto();
     //refreshTime();
     //screenOffTime = millis() + SCREENONTIME;
     //inactivity = 0;
   }
   if (!(PIND & 0x01)) { //pd0 - RX BT
-    //Serial.println("PCINT24 : RX BT");
     if (inactivity) {
-      //once = true;
-    //Serial.println("RX_BT");
       screenOffTime = millis() + SCREENONTIME;
       inactivity = 0;
       state = 2;
@@ -85,15 +84,17 @@ ISR(PCINT2_vect) {
   cli();
   if (!(PINC & 0x80)) { //pressed - sw1
     Serial.println("SW1");
+    hm11_wakeup();
     screenOffTime = millis() + SCREENONTIME;
     once = true;
     if (!inactivity) SW1Pressed = true;
   }
   if (!(PINC & 0x40)){ // pd2 //pressed - sw2
     Serial.println("SW2");
+    hm11_wakeup();
     once = true;
-    if (!inactivity) state++; else state = 1;
-    if (state>NUMBER_OF_STATES-1) state = 1;
+    if (!inactivity) state++; else state = 2;
+    //if (state>NUMBER_OF_STATES-1) state = 1;
     inactivity = 0;
     SW1Pressed = false;
     screenOffTime = millis() + SCREENONTIME;
@@ -123,20 +124,6 @@ void setup()
 
 void loop()
 {
-  if (millis()>screenOffTime){
-      state = 1;
-      //hp5082_off();
-      //oledShutdown();
-      deepsleep_goto();
-  }//check always
-
-  if (millis()>rtcLastMillis+RTCREFRESHMILLIS) {
-    refreshTime();
-  }//check always
-
-  if (minute>59) minute=0;
-  if (hour>23) hour =0; //check always
-
   switch (state) {//switch STATE MACHINE
     case 2: {
       if (once) {
@@ -144,18 +131,10 @@ void loop()
         oledShutdown();
         once = false;
       }
-      hp5082_display(dHour);
       for(RXbytes = 0; Serial.available(); RXbytes++) {
          // get the new byte:
         char inChar = (char)Serial.read();
-
-        // add it to the inputString:
         RXString[RXbytes] = inChar;
-        // if the incoming character is a newline, set a flag so the main loop can
-        // do something about it:
-       // if (inChar == '\n') {
-          
-        //}
         rxStringComplete = true;
         newRxString = true;
       }
@@ -163,13 +142,14 @@ void loop()
         for (int i = RXbytes; i<RXStringMaxSize; i++) {
           RXString[i] = 0;
         }
-      
+      //validate RXString - characters with app name and 
       if (newRxString) {
         oledInit(0x3c, 0, 0);
         oledFill(0);
         oledWriteString(0,0,RXString,FONT_SMALL,0);
         newRxString = false;
       }
+      hp5082_display(dHour); // blocking task to the end
       break;
     }
     case 1: { //debug, setup
@@ -191,7 +171,7 @@ void loop()
             oledFill(0);
             oledWriteString(0,0,"    Ustaw godzine",FONT_SMALL,0);
             oledWriteString(0,1,"   SW1 = godzina++ ->",FONT_SMALL,0);
-            oledWriteString(0,5,"SW2 = kolejny tryb ->",FONT_SMALL,0);
+            oledWriteString(0,7,"SW2 = kolejny tryb ->",FONT_SMALL,0);
           }
           once = false;
       }
@@ -215,7 +195,7 @@ void loop()
             oledFill(0);
             oledWriteString(0,0,"    Ustaw minute",FONT_SMALL,0);
             oledWriteString(0,1,"    SW1 = minuta++ ->",FONT_SMALL,0);
-            oledWriteString(0,5,"SW2 = kolejny tryb ->",FONT_SMALL,0);
+            oledWriteString(0,7,"SW2 = kolejny tryb ->",FONT_SMALL,0);
           }
           once = false;
       }
@@ -231,4 +211,18 @@ void loop()
     }
     default: state=2; break;
   }
+
+  if (millis()>screenOffTime){
+      state = 1;
+      //hp5082_off();
+      //oledShutdown();
+      deepsleep_goto();
+  }//check always
+
+  if (millis()>rtcLastMillis+RTCREFRESHMILLIS) {
+    refreshTime();
+  }//check always
+
+  if (minute>59) minute=0;
+  if (hour>23) hour =0; //check always
 }

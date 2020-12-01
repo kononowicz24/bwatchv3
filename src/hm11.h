@@ -22,8 +22,14 @@ void hm11_disconnect() {
 }
 void hm11_sleep() {
     hm11_disconnect();
-    _delay_ms(100);
+    _delay_ms(1000);
     Serial.write("AT+SLEEP\r\n");
+    _delay_ms(100);
+}
+
+void hm11_wakeup() {
+    Serial.write("HM11 MODULE WAKEUP HM11 MODULE WAKEUP\r\n"); 
+    //module needs to be woken up when the device is woken up, in order not to make the sleep command wake up the module.
     _delay_ms(100);
 }
 
