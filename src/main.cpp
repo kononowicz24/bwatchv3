@@ -28,7 +28,7 @@ int hour = 0;
 volatile bool once = true;
 
 char* RXString;
-uint8_t RXStringMaxSize = 255;
+uint8_t RXStringMaxSize = 60;
 bool rxStringComplete = false;
 bool newRxString = false;
 uint8_t RXbytes = 0;
@@ -51,10 +51,14 @@ void refreshTime() {
 }
 
 bool isStringValidText(char* string, uint8_t strlength) {
+  bool result = false;
   for (int i=0; i<strlength; i++) {
-    if (string[i] == '\\') return true;
+    if (string[i] == '\\') {
+       string[i] = ' ';
+       result = true;
+    }
   }
-  return false;
+  return result;
 }
 
 ISR(PCINT3_vect) {
@@ -102,7 +106,7 @@ ISR(PCINT2_vect) {
     Serial.println("SW2");
     hm11_wakeup();
     once = true;
-    if (!inactivity) state++; else state = 2;
+    if (!inactivity) state++; else state = 1;
     //if (state>NUMBER_OF_STATES-1) state = 1;
     inactivity = 0;
     SW1Pressed = false;
@@ -140,7 +144,8 @@ void loop()
         oledShutdown();
         once = false;
       }
-      hp5082_display(dHour); // blocking task to the end
+      hp5082_off();
+      hp5082_setDP();
       for(RXbytes = 0; Serial.available(); RXbytes++) {
          // get the new byte:
         char inChar = (char)Serial.read();
@@ -151,18 +156,28 @@ void loop()
       if (newRxString)
         for (int i = RXbytes; i<RXStringMaxSize; i++) {
           RXString[i] = 0;
-          screenOffTime = millis() + SCREENONTIME;
+          
         }
-      //validate RXString - characters with app name and 
       if (!isStringValidText(RXString, RXStringMaxSize)) {
           newRxString = false;
+      } else {
+        screenOffTime = millis() + SCREENONTIME;
       }
+      char text_temp[15];
+      itoa(RXbytes,text_temp,10);
       if (newRxString) {
         oledInit(0x3c, 0, 0);
         oledFill(0);
-        oledWriteString(0,0,RXString,FONT_SMALL,0);
+        oledWriteString(0,0,"Powiadomienie: ",FONT_SMALL,0);
+        oledWriteString(0,7,text_temp,FONT_SMALL,0);
+        oledWriteString(0,1,RXString,FONT_SMALL,0);
+        oledWriteString(0,2,RXString+21,FONT_SMALL,0);
+        oledWriteString(0,3,RXString+42,FONT_SMALL,0);
+        oledWriteString(0,4,RXString+63,FONT_SMALL,0);
+        oledWriteString(0,5,RXString+84,FONT_SMALL,0);
         newRxString = false;
       }
+      //hp5082_display(dHour); // blocking task to the end
       break;
     }
     case 1: { //debug, setup

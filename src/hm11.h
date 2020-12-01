@@ -33,4 +33,8 @@ void hm11_wakeup() {
     _delay_ms(100);
 }
 
+void hm11_getMAC() {
+    
+}
+
 #endif

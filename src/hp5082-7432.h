@@ -22,7 +22,7 @@ void hp5082_display(int value) { //todo: leading zeroes, on/off
   for (int i=0; i<4; i++) {
       int digit = (value/(int)pow(10,3-i))%10;
       PORTA = digits[digit];
-      //if (hp5802_DPpos & (3-i)) PORTA |= 0x80;
+      if (i==1) PORTA |= 0x80;
       PORTB &= 0xF0;
       //PORTB += segments[3-i];
       PORTB |= 1<<(3-i);
@@ -43,8 +43,10 @@ void hp5082_display2(int value, int offset) { //todo: leading zeroes, on/off
     }
 }
 
-void hp5082_setDP(int position) {
-  hp5802_DPpos = position;
+void hp5082_setDP() {
+  //hp5802_DPpos = position;
+  PORTA |= 0x80;
+  PORTB |= 0x0F;
 }
 
 void hp5082_off() {
