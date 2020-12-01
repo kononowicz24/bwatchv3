@@ -141,6 +141,7 @@ void loop()
       if (newRxString)
         for (int i = RXbytes; i<RXStringMaxSize; i++) {
           RXString[i] = 0;
+          screenOffTime = millis() + SCREENONTIME;
         }
       //validate RXString - characters with app name and 
       if (newRxString) {
