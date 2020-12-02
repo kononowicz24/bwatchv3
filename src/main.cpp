@@ -71,7 +71,7 @@ ISR(PCINT3_vect) {
     refreshTime();
     screenOffTime = millis() + SCREENONTIME;
     inactivity = 0;
-    state = 2;
+    state = 1;
   }
   if (!(PIND & 0x10)) { //pd4 //test
     Serial.println("PCINT28 : INACTIVITY"); //INT1
@@ -87,7 +87,9 @@ ISR(PCINT3_vect) {
       screenOffTime = millis() + SCREENONTIME;
       inactivity = 0;
       state = 2;
+     //ustaw tryb z notyfikacja
     }
+      
   }
   sei();
 }
@@ -163,18 +165,24 @@ void loop()
       } else {
         screenOffTime = millis() + SCREENONTIME;
       }
-      char text_temp[15];
-      itoa(RXbytes,text_temp,10);
+      
       if (newRxString) {
         oledInit(0x3c, 0, 0);
         oledFill(0);
         oledWriteString(0,0,"Powiadomienie: ",FONT_SMALL,0);
+        char text_temp[5];
+        itoa(RXbytes,text_temp,10);
         oledWriteString(0,7,text_temp,FONT_SMALL,0);
         oledWriteString(0,1,RXString,FONT_SMALL,0);
         oledWriteString(0,2,RXString+21,FONT_SMALL,0);
         oledWriteString(0,3,RXString+42,FONT_SMALL,0);
         oledWriteString(0,4,RXString+63,FONT_SMALL,0);
         oledWriteString(0,5,RXString+84,FONT_SMALL,0);
+        itoa(ds3231m_getHours(),text_temp,10);
+        oledWriteString(84,7,text_temp,FONT_SMALL,0);
+        itoa(ds3231m_getMinutes(),text_temp,10);
+        oledWriteString(108,7,text_temp,FONT_SMALL,0);
+        oledWriteString(100,7,":",FONT_SMALL,0);
         newRxString = false;
       }
       //hp5082_display(dHour); // blocking task to the end
@@ -185,7 +193,8 @@ void loop()
         oledInit(0x3c, 0, 0);
         oledFill(0);
        //oledWriteString(0,0,"debug",FONT_SMALL,0);
-        oledWriteString(0,1,"Ustawienia",FONT_SMALL,0);
+        //oledWriteString(0,1,"Ustawienia",FONT_SMALL,0);
+        //tu mac
         once = false;
       }
       hp5082_display(dHour);
