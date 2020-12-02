@@ -28,7 +28,7 @@ int hour = 0;
 volatile bool once = true;
 
 char* RXString;
-uint8_t RXStringMaxSize = 60;
+uint8_t RXStringMaxSize = 105;
 bool rxStringComplete = false;
 bool newRxString = false;
 uint8_t RXbytes = 0;
