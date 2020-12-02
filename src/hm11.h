@@ -22,7 +22,7 @@ void hm11_disconnect() {
 }
 void hm11_sleep() {
     hm11_disconnect();
-    _delay_ms(1000);
+    _delay_ms(200);
     Serial.write("AT+SLEEP\r\n");
     _delay_ms(100);
 }
@@ -34,7 +34,7 @@ void hm11_wakeup() {
 }
 
 void hm11_getMAC() {
-    
+
 }
 
 #endif

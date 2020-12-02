@@ -28,7 +28,7 @@ int hour = 0;
 volatile bool once = true;
 
 char* RXString;
-uint8_t RXStringMaxSize = 60;
+uint8_t RXStringMaxSize = 250;
 bool rxStringComplete = false;
 bool newRxString = false;
 uint8_t RXbytes = 0;
@@ -58,6 +58,7 @@ bool isStringValidText(char* string, uint8_t strlength) {
        result = true;
     }
   }
+  Serial.println(result);
   return result;
 }
 
@@ -84,6 +85,7 @@ ISR(PCINT3_vect) {
   }
   if (!(PIND & 0x01)) { //pd0 - RX BT
     if (inactivity) {
+      once = true;
       screenOffTime = millis() + SCREENONTIME;
       inactivity = 0;
       state = 2;
@@ -143,7 +145,13 @@ void loop()
     case 2: {
       if (once) {
         oledInit(0x3c, 0, 0);
-        oledShutdown();
+        oledFill(0);
+        char text_temp[5];
+        itoa(ds3231m_getHours(),text_temp,10);
+        oledWriteString(84,7,text_temp,FONT_SMALL,0);
+        itoa(ds3231m_getMinutes(),text_temp,10);
+        oledWriteString(108,7,text_temp,FONT_SMALL,0);
+        oledWriteString(100,7,":",FONT_SMALL,0);
         once = false;
       }
       hp5082_off();
@@ -155,37 +163,29 @@ void loop()
         rxStringComplete = true;
         newRxString = true;
       }
-      if (newRxString)
-        for (int i = RXbytes; i<RXStringMaxSize; i++) {
-          RXString[i] = 0;
-          
-        }
-      if (!isStringValidText(RXString, RXStringMaxSize)) {
-          newRxString = false;
-      } else {
-        screenOffTime = millis() + SCREENONTIME;
+      if (newRxString){
+         for (int i = RXbytes; i<RXStringMaxSize; i++) {
+            RXString[i] = 0;
+         }
+         if (!isStringValidText(RXString, RXStringMaxSize)) {
+             newRxString = false;
+         } else {
+           screenOffTime = millis() + SCREENONTIME;
+         }
       }
       
       if (newRxString) {
-        oledInit(0x3c, 0, 0);
-        oledFill(0);
+        //oledInit(0x3c, 0, 0);
+        //oledFill(0);
         oledWriteString(0,0,"Powiadomienie: ",FONT_SMALL,0);
         char text_temp[5];
         itoa(RXbytes,text_temp,10);
         oledWriteString(0,7,text_temp,FONT_SMALL,0);
         oledWriteString(0,1,RXString,FONT_SMALL,0);
         oledWriteString(0,2,RXString+21,FONT_SMALL,0);
-        oledWriteString(0,3,RXString+42,FONT_SMALL,0);
-        oledWriteString(0,4,RXString+63,FONT_SMALL,0);
-        oledWriteString(0,5,RXString+84,FONT_SMALL,0);
-        itoa(ds3231m_getHours(),text_temp,10);
-        oledWriteString(84,7,text_temp,FONT_SMALL,0);
-        itoa(ds3231m_getMinutes(),text_temp,10);
-        oledWriteString(108,7,text_temp,FONT_SMALL,0);
-        oledWriteString(100,7,":",FONT_SMALL,0);
+
         newRxString = false;
       }
-      //hp5082_display(dHour); // blocking task to the end
       break;
     }
     case 1: { //debug, setup
